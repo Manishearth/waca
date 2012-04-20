@@ -928,4 +928,8 @@ class accRequest {
 		}
 	}
 }
+
+class Request extends DataObject {
+	
+}
 ?>
