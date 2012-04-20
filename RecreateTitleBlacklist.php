@@ -3,6 +3,7 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
 	die();
 } // Web clients die.
 ini_set('display_errors', 1);
+require_once("includes/WebStart.php");
 require_once 'config.inc.php';
 
 $strictMode = 0;

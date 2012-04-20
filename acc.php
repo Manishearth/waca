@@ -28,6 +28,7 @@ require_once 'includes/skin.php';
 require_once 'includes/accbotSend.php';
 require_once 'includes/session.php';
 require_once 'includes/http.php';
+require_once("includes/WebStart.php");
 
 // Set the current version of the ACC.
 $version = "0.9.7";

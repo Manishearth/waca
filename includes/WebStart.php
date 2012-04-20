@@ -19,6 +19,23 @@ $gAutoload = array(
 class WebStart {
 	public static function setup() {
 		spl_autoload_register('WebStart::autoload');
+		
+		require_once "config.inc.php";
+	}
+	
+	private static $databases = array();
+	
+	public static function getDatabase($type = "acc") {
+		if( isset( $databases[ $type ] ) ) {
+			return $databases[ $type ];
+		} else {
+			global $gDatabaseConfiguration;
+			$databases[ $type ] = new PdoDatabase( 
+				$gDatabaseConfiguration[ $type ][ "connectionString" ],
+				$gDatabaseConfiguration[ $type ][ "username" ],
+				$gDatabaseConfiguration[ $type ][ "password" ]
+			);
+		}
 	}
 
 	public static autoload($class) {

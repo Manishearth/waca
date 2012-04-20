@@ -5,7 +5,7 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
 } // Web clients die.
 
 ini_set('display_errors', 1);
-
+require_once("includes/WebStart.php");
 // This task is intended to clone [[User:SQLBot-Hello]],
 // and while the code has been completely rewritten, the
 // design and functionality of this bot is very similar

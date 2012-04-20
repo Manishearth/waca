@@ -22,6 +22,7 @@ require_once 'includes/request.php';
 require_once 'includes/skin.php';
 require_once 'includes/messages.php';
 require_once 'includes/accbotSend.php';
+require_once("includes/WebStart.php");
 
 // Check to see if the database is unavailable.
 // Uses the true variable as the public uses this page.

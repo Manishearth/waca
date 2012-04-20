@@ -29,6 +29,23 @@ $toolserver_password = "";
 $toolserver_host = "";
 $toolserver_database = "";
 
+$gDatabaseConfiguration = array();
+$gDatabaseConfiguration["acc"] = array(
+	"connectionString" => "",
+	"username" => "",
+	"password" => ""
+);
+$gDatabaseConfiguration["wiki"] = array(
+	"connectionString" => "",
+	"username" => "",
+	"password" => ""
+);
+$gDatabaseConfiguration["notification"] = array(
+	"connectionString" => "",
+	"username" => "",
+	"password" => ""
+);
+
 $toolserver_notification_database = "p_acc_notifications";
 
 // The antispoof configuration.

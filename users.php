@@ -13,6 +13,7 @@
 ***************************************************************************/
 // Get all the classes.
 require_once 'config.inc.php';
+require_once("includes/WebStart.php");
 require_once 'functions.php';
 require_once 'includes/database.php';
 require_once 'includes/messages.php';

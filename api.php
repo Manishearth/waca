@@ -6,12 +6,11 @@
 // status - Displays interface statistics, such as the number of open requests.
 // stats - Gives a readout similar to the user list user information page.
 
-require_once("config.inc.php");
-require_once("includes/PdoDatabase.php");
+require_once("includes/WebStart.php");
 
 // setup
 
-$database = new PdoDatabase("mysql:host=".$toolserver_host.";dbname=".$toolserver_database,$toolserver_username, $toolserver_password);
+$database = WebStart::getDatabase();
 
 // use exceptions on failed database queries
 $database->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
