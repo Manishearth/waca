@@ -78,6 +78,7 @@ if (isset ($_POST['name']) && isset ($_POST['email'])) {
 	$request->checkBan('IP',$_SERVER['REMOTE_ADDR']);
 	$request->checkBan('Name',$_POST['name']);
 	$request->checkBan('EMail',$_POST['email']);
+	$request->checkBan('UA',htmlentities($_ENV["HTTP_USER_AGENT"],ENT_COMPAT,'UTF-8'));
 	$request->blockedOnEn();
 	
 	// Check the blacklists.

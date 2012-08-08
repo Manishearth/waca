@@ -949,9 +949,11 @@ elseif ($action == "sban") {
 				die();
 			}
 			break;
+		case 'UA':
+			break;
 
 		default:
-			echo '<h2>ERROR</h2><br />Invalid type specified.  Expecting IP, Name, or EMail.';
+			echo '<h2>ERROR</h2><br />Invalid type specified.  Expecting IP, Name, EMail, or UA.';
 			$skin->displayIfooter();
 			die();
 	}
@@ -1070,7 +1072,7 @@ elseif ($action == "unban" && $_GET['id'] != "")
 }
 elseif ($action == "ban") {
 	$siuser = sanitize($_SESSION['user']);
-	if (isset ($_GET['ip']) || isset ($_GET['email']) || isset ($_GET['name'])) {
+	if (isset ($_GET['ip']) || isset ($_GET['email']) || isset ($_GET['name']|| isset ($_GET['ua'])) {
 		if(!$session->hasright($_SESSION['user'], "Admin"))
 			die("Only administrators may ban users");
 		if (isset($_GET['ip'])) {
@@ -1095,6 +1097,16 @@ elseif ($action == "ban") {
 		}
 		elseif (isset($_GET['name'])) {
 			$name2 = sanitize($_GET['name']);
+			$query = "SELECT * FROM acc_pend WHERE pend_id = '$name2';";
+			$result = mysql_query($query, $tsSQLlink);
+			if (!$result)
+				sqlerror("Query failed: $query ERROR: " . mysql_error());
+			$row = mysql_fetch_assoc($result);
+			$target = $row['pend_name'];
+			$type = "Name";
+		}
+		elseif (isset($_GET['ua'])) {
+			$name2 = sanitize($_GET['ua']);
 			$query = "SELECT * FROM acc_pend WHERE pend_id = '$name2';";
 			$result = mysql_query($query, $tsSQLlink);
 			if (!$result)
@@ -1204,7 +1216,7 @@ elseif ($action == "ban") {
 			/* TODO: Add some fancy javascript that hides this until the user selects other from the menu above */
 			echo "<tr><td>Other:</td><td><input type=\"text\" name=\"otherduration\"/></td></tr>";
 			echo "<tr><td>Type:</td><td>\n";
- 			echo "<select name=\"type\"><option value=\"IP\">IP</option><option value=\"Name\">Name</option><option value=\"EMail\">E-Mail</option></select>\n";
+ 			echo "<select name=\"type\"><option value=\"IP\">IP</option><option value=\"Name\">Name</option><option value=\"EMail\">E-Mail</option><option value=\"UA\">UA</option></select>\n";
  			echo "</td></tr>\n";
 			echo "</table><br />\n";
 			echo "<input type=\"submit\"/></form>\n";
