@@ -1072,7 +1072,7 @@ elseif ($action == "unban" && $_GET['id'] != "")
 }
 elseif ($action == "ban") {
 	$siuser = sanitize($_SESSION['user']);
-	if (isset ($_GET['ip']) || isset ($_GET['email']) || isset ($_GET['name']|| isset ($_GET['ua'])) {
+	if (isset ($_GET['ip']) || isset ($_GET['email']) || isset ($_GET['name'] )|| isset ($_GET['ua'])) {
 		if(!$session->hasright($_SESSION['user'], "Admin"))
 			die("Only administrators may ban users");
 		if (isset($_GET['ip'])) {
