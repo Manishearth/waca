@@ -604,10 +604,158 @@ elseif ($action == "messagemgmt") {
 		$skin->displayIfooter();
 		die();
 	}
+	if (isset ($_GET['clrcreate'])) {
+		if(!$session->hasright($_SESSION['user'], 'Admin')) {
+			echo "I'm sorry, but, this page is restricted to administrators only.<br />\n";
+			$skin->displayIfooter();
+			die();
+		}
+		if ( isset( $_GET['submit'] ) ) {
+			$clrdesc = sanitize($_POST['clrdesc']);
+			$clrtext = sanitize($_POST['clrtext']);
+			$clrquestion = sanitize($_POST['clrquestion']);
+			if (isset($_POST['clrdecline'])) {
+				$clrdecline = "1";
+			}
+			else {
+				$clrdecline = "0";
+			}
+			if (isset($_POST['clractive'])) {
+				$clractive = "1";
+			}
+			else {
+				$clractive = "0";
+			}
+			$query = "INSERT INTO acc_clr (clr_desc, clr_text, clr_question, clr_decline, clr_active) VALUES ('$clrdesc', '$clrtext', '$clrquestion', '$clrdecline', '$clractive');";
+			$result = mysql_query( $query, $tsSQLlink );
+			if( !$result ) {
+				sqlerror(mysql_error(),"Could not update message");
+			}
+			$cid = mysql_insert_id();
+			$siuser = sanitize($_SESSION['user']);
+			$now = date("Y-m-d H-i-s");
+			$query = "INSERT INTO acc_log (log_pend, log_user, log_action, log_time, log_cmt) VALUES ('$cid', '$siuser', 'CloseAdded', '$now', '$clrdesc');";
+			$result = mysql_query($query, $tsSQLlink);
+			if (!$result)
+				sqlerror("Query failed: $query ERROR: " . mysql_error());
+			echo "Close reason $clrdesc created.<br />\n";
+			$accbotSend->send("Close reason $cid ($clrdesc) created by $siuser");
+			$skin->displayIfooter();
+			die();
+		}
+		echo "<h2>Create close reason</h2>\n<form action=\"$tsurl/acc.php?action=messagemgmt&amp;clrcreate=1&amp;submit=1\" method=\"post\">\n";
+		echo "<label for=\"clrdesc\">Name of this close reason</label>\n<input type=\"text\" name=\"clrdesc\" id=\"clrdesc\"><br />\n";
+		echo "<label for=\"clrtext\">Text for this close reason</label>\n<textarea name=\"clrtext\" id=\"clrtext\" rows=\"20\" cols=\"60\"></textarea><br />\n";
+		echo "<label for=\"clrquestion\">Question to ask the user for this close reason</label>\n<input type=\"text\" id=\"clrquestion\" name=\"clrquestion\" size=\"75\"><br />\n";
+		echo "<p><input type=\"checkbox\" name=\"clrdecline\" value=\"1\" checked> Used for declined requests?</p>\n";
+		echo "<p><input type=\"checkbox\" name=\"clractive\" value=\"1\" checked> Active</p><br />\n";
+		echo "<input type=\"submit\"/><input type=\"reset\"/><br />\n";
+		echo "</form>";
+		$skin->displayIfooter();
+		die();
+	}
+	if (isset ($_GET['clredit'])) {
+		if(!$session->hasright($_SESSION['user'], 'Admin')) {
+			echo "I'm sorry, but, this page is restricted to administrators only.<br />\n";
+			$skin->displayIfooter();
+			die();
+		}
+		if (!preg_match('/^[0-9]*$/',$_GET['clredit']))
+			die('Invaild GET value passed.');
+		$cid = sanitize($_GET['clredit']);
+		if ( isset( $_GET['submit'] ) ) {
+			$clrdesc = sanitize($_POST['clrdesc']);
+			$clrtext = sanitize($_POST['clrtext']);
+			$clrquestion = sanitize($_POST['clrquestion']);
+			if (isset($_POST['clrdecline'])) {
+				$clrdecline = "1";
+			}
+			else {
+				$clrdecline = "0";
+			}
+			if (isset($_POST['clractive'])) {
+				$clractive = "1";
+			}
+			else {
+				$clractive = "0";
+			}
+			$query = "UPDATE acc_clr SET clr_desc = '$clrdesc', clr_text = '$clrtext', clr_question = '$clrquestion', clr_decline = '$clrdecline', clr_active = '$clractive'  WHERE clr_id = '$cid';";
+			$result = mysql_query( $query, $tsSQLlink );
+			if( !$result ) {
+				sqlerror(mysql_error(),"Could not update message");
+			}
+			$siuser = sanitize($_SESSION['user']);
+			$now = date("Y-m-d H-i-s");
+			$query = "INSERT INTO acc_log (log_pend, log_user, log_action, log_time, log_cmt) VALUES ('$cid', '$siuser', 'CloseEdited', '$now', '$clrdesc');";
+			$result = mysql_query($query, $tsSQLlink);
+			if (!$result)
+				sqlerror("Query failed: $query ERROR: " . mysql_error());
+			echo "Close reason $clrdesc changed.<br />\n";
+			$accbotSend->send("Close reason $cid ($clrdesc) edited by $siuser");
+			$skin->displayIfooter();
+			die();
+		}
+		$query = "SELECT * FROM acc_clr WHERE clr_id = $cid;";
+		$result = mysql_query($query, $tsSQLlink);
+		if (!$result)
+			sqlerror("Query failed: $query ERROR: " . mysql_error());
+		$row = mysql_fetch_assoc($result);
+		$clrtext = htmlentities($row['clr_text'],ENT_COMPAT,'UTF-8');
+		$clrdecline = "";
+		if ($row['clr_decline'] == 1) {
+			$clrdecline = " checked";
+		}
+		$clractive = "";
+		if ($row['clr_active'] == 1) {
+			$clractive = " checked";
+		}
+		echo "<h2>Edit close reason</h2>\n<form action=\"$tsurl/acc.php?action=messagemgmt&amp;clredit=$cid&amp;submit=1\" method=\"post\">\n";
+		echo "<label for=\"clrdesc\">Name of this close reason</label>\n<input type=\"text\" name=\"clrdesc\" id=\"clrdesc\" value=\"" . $row['clr_desc'] . "\"/><br />\n";
+		echo "<label for=\"clrtext\">Text for this close reason</label>\n<textarea name=\"clrtext\" id=\"clrtext\" rows=\"20\" cols=\"60\">$clrtext</textarea><br />\n";
+		echo "<label for=\"clrquestion\">Question to ask the user for this close reason</label>\n<input type=\"text\" id=\"clrquestion\" name=\"clrquestion\" size=\"75\" value=\"" . $row['clr_question'] . "\"/><br />\n";
+		echo "<p><input type=\"checkbox\" name=\"clrdecline\" value=\"1\"$clrdecline> Used for declined requests?</p>\n";
+		echo "<p><input type=\"checkbox\" name=\"clractive\" value=\"1\"$clractive> Active</p><br />\n";
+		echo "<input type=\"submit\"/><input type=\"reset\"/><br />\n";
+		echo "</form>";
+		$skin->displayIfooter();
+		die();
+	}
+	if (isset ($_GET['clrview'])) {
+		if (!preg_match('/^[0-9]*$/',$_GET['clrview']))
+			die('Invaild GET value passed.');
+		$cid = sanitize($_GET['clrview']);
+		$query = "SELECT * FROM acc_clr WHERE clr_id = $cid ORDER BY clr_id DESC LIMIT 1;";
+		$result = mysql_query($query, $tsSQLlink);
+		if (!$result)
+			sqlerror("Query failed: $query ERROR: " . mysql_error());
+		$row = mysql_fetch_assoc($result);
+		$clrtext = htmlentities($row['clr_text'],ENT_COMPAT,'UTF-8');
+		if ($row['clr_decline'] == 1) {
+			$clrdecline = "Yes";
+		}
+		else {
+			$clrdecline = "No";
+		}
+		if ($row['clr_active'] == 1) {
+			$clractive = "Yes";
+		}
+		else {
+			$clractive = "No";
+		}
+		echo "<h2>View message</h2><br />Close reason ID: " . $row['clr_id'] . "<br />\n";
+		echo "Close reason title: " . $row['clr_desc'] . "<br />\n";
+		echo "Close reason question: " . $row['clr_question'] . "<br />\n";
+		echo "Close reason used for declining requests?: $clrdecline <br />\n";
+		echo "Active?: $clractive <br />\n";
+		echo "Close reason text: <br /><pre>$clrtext</pre><br />\n";
+		$skin->displayIfooter();
+		die();
+	}
 	$query = "SELECT mail_id, mail_count, mail_desc FROM acc_emails WHERE mail_type = 'Message';";
 	$result = mysql_query($query, $tsSQLlink);
 	if (!$result)
 		sqlerror("Query failed: $query ERROR: " . mysql_error());
+	echo "<div id=\"messages\" style=\"float:left;width:50%;\">\n";
 	echo "<h2>Mail messages</h2>\n";
 	echo "<ul>\n";
 	while ( list( $mail_id, $mail_count, $mail_desc ) = mysql_fetch_row( $result ) ) {
@@ -661,7 +809,28 @@ elseif ($action == "messagemgmt") {
 		echo "$out2\n";
 		}
 	}
-	echo "</ul>";
+	echo "</ul></div>\n";
+	echo "<div id=\"emails\" style=\"float:left;width:50%;\">";
+	echo "<h2>Request close messages</h2>\n";
+	echo "<a href=\"$tsurl/acc.php?action=messagemgmt&amp;clrcreate=1\">Create new</a>\n";
+	echo "<ol>\n";
+	$query = "SELECT * FROM acc_clr;";
+	$result = mysql_query($query, $tsSQLlink);
+	if (!$result)
+		sqlerror("Query failed: $query ERROR: " . mysql_error());
+	while ($row = mysql_fetch_assoc($result)) {
+		$clrid = $row['clr_id'];
+		$clrdesc = $row['clr_desc'];
+		$out = "<li><small>[ $clrdesc ] <a href=\"$tsurl/acc.php?action=messagemgmt&amp;clredit=$clrid\">Edit!</a> - <a href=\"$tsurl/acc.php?action=messagemgmt&amp;clrview=$clrid\">View!</a></small></li>";
+		$out2 = "<li><small>[ $clrdesc ] <a href=\"$tsurl/acc.php?action=messagemgmt&amp;clrview=$clrid\">View!</a></small></li>";
+		if($session->hasright($_SESSION['user'], 'Admin')){
+			echo "$out\n";
+		}
+		elseif(!$session->hasright($_SESSION['user'], 'Admin')){
+			echo "$out2\n";
+		}
+	}
+	echo "</ol></div>";
 	$skin->displayIfooter();
 	die();
 }
@@ -1348,18 +1517,25 @@ HTML;
 }
 elseif ($action == "done" && $_GET['id'] != "") {
 	// check for valid close reasons
-	global $messages, $skin;
-	
-	if (!isset($_GET['email']) | !($messages->isEmail($_GET['email'])) and $_GET['email'] != 'custom') {
-		echo "Invalid close reason";
-		$skin->displayIfooter();
-		die();
-	}
+	global $skin;
 	
 	// sanitise this input ready for inclusion in queries
 	$gid = sanitize($_GET['id']);
 	$gem = sanitize($_GET['email']);
 	
+	if ($gem != "0" && $gem != "custom" && $gem != "custom-y" && $gem != "custom-n") {
+		$queryc = "SELECT * FROM acc_clr WHERE clr_active = 1 AND clr_id = $gem;";
+		$resultc = mysql_query($queryc, $tsSQLlink);
+		if (!$resultc)
+			sqlerror("Query failed: $queryc ERROR: " . mysql_error());
+		$rowsc = mysql_num_rows($resultc);
+		$rowc = mysql_fetch_assoc($resultc);
+		if ($rowsc < 1) {
+			$skin->displayRequestMsg("Invalid close reason.");
+			$skin->displayIfooter();
+		die();
+		}
+	}
 	// check the checksum is valid
 	if (csvalid($gid, $_GET['sum']) != 1) {
 		echo "Invalid checksum (This is similar to an edit conflict on Wikipedia; it means that <br />you have tried to perform an action on a request that someone else has performed an action on since you loaded the page)<br />";
@@ -1487,42 +1663,25 @@ elseif ($action == "done" && $_GET['id'] != "") {
 	if (!$result)
 		sqlerror("Query failed: $query ERROR: " . mysql_error());
 	$now = date("Y-m-d H-i-s");
-	$query = "INSERT INTO acc_log (log_pend, log_user, log_action, log_time, log_cmt) VALUES ('$gid', '$sid', 'Closed $gem', '$now', " . (isset($_POST['msgbody']) ? ("'" . sanitize($_POST['msgbody']) . "'") : "''") . ");";
+	if ($gem != 'custom' && $gem != 'custom-y' && $gem != 'custom-n' && $gem != '0') {
+		$query = "INSERT INTO acc_log (log_pend, log_user, log_action, log_time, log_cmt) VALUES ('$gid', '$sid', 'ClosedNew $gem', '$now', " . (isset($_POST['msgbody']) ? ("'" . sanitize($_POST['msgbody']) . "'") : "''") . ");";
+	}
+	else {
+		$query = "INSERT INTO acc_log (log_pend, log_user, log_action, log_time, log_cmt) VALUES ('$gid', '$sid', 'Closed $gem', '$now', " . (isset($_POST['msgbody']) ? ("'" . sanitize($_POST['msgbody']) . "'") : "''") . ");";
+	}
 	$result = mysql_query($query, $tsSQLlink);
 	if (!$result)
 		sqlerror("Query failed: $query ERROR: " . mysql_error());
-	switch ($gem) {
-		case 0 :
-			$crea = "Dropped";
-			break;
-		case 1 :
-			$crea = "Created";
-			break;
-		case 2 :
-			$crea = "Too Similar";
-			break;
-		case 3 :
-			$crea = "Taken";
-			break;
-		case 4 :
-			$crea = "Username vio";
-			break;
-		case 5 :
-			$crea = "Impossible";
-			break;
-		case 26:
-			$crea = "SUL Taken";
-			break;
-		case 30:
-			$crea = "Password Reset";
-			break;
-	}
 	if ($gem == 'custom') {
 		$crea = "Custom";
 	} else if ($gem == 'custom-y') {
 		$crea = "Custom, Created";
 	} else if ($gem == 'custom-n') {
 		$crea = "Custom, Not Created";
+	} else if ($gem == '0') {
+		$crea = "Dropped";
+	} else {
+		$crea = $rowc['clr_desc'];
 	}
 	$now = explode("-", $now);
 	$now = $now['0'] . "-" . $now['1'] . "-" . $now['2'] . ":" . $now['3'] . ":" . $now['4'];
@@ -1607,7 +1766,9 @@ elseif ($action == "logs") {
 				"Renamed" => "User rename",
 				"Approved" => "User approval",
 				"Promoted" => "User promotion",
-				"Prefchange" => "User preferences change"
+				"Prefchange" => "User preferences change",
+				"CloseAdded" => "Close reason creation",
+				"CloseEdited" => "Close reason editing"
 	);
 	foreach($logActions as $key => $value)
 	{

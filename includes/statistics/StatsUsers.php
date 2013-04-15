@@ -213,11 +213,26 @@ class StatsUsers extends StatisticsPage
 		
 		$qb = new QueryBrowser();
 		$out .= $qb->executeQueryToTable('SELECT mail_desc AS "Close type", COUNT(*) AS Count FROM acc_log l INNER JOIN closes ON `CONCAT("Closed ",mail_id)` = l.log_action WHERE l.log_user = "'.$siuser.'" AND l.log_action LIKE "Closed%" GROUP BY l.log_action;');
+		$out .= $qb->executeQueryToTable('SELECT clr_desc AS "Close type", COUNT(*) AS Count FROM acc_log l INNER JOIN closes ON `CONCAT("ClosedNew ",clr_id)` = l.log_action WHERE l.log_user = "'.$siuser.'" AND l.log_action LIKE "ClosedNew%" GROUP BY l.log_action;');
 		
+		// Get all reasons that are considered to be 'created' requests
+		$queryc = "SELECT clr_id FROM acc_clr WHERE clr_decline = 0;";
+		$resultc = $tsSQL->query($queryc);
+		if (!$resultc) {
+			// If query fails, tell us about it
+			$out.="<span style=\"color:red;font-weight:bold\">" . $tsSQL->getError() . "</span>";
+		}
 		
 		// List the requests this user has marked as 'created'
 		$out.= "<h2>Users created</h2>\n";
-		$query = "SELECT * FROM acc_log JOIN acc_pend ON pend_id = log_pend WHERE log_user = '" . $siuser . "' AND (log_action = 'Closed 1' OR log_action = 'Closed custom-y');";
+		$query = "";
+		$query.= "SELECT * FROM acc_log JOIN acc_pend ON pend_id = log_pend WHERE log_user = '" . $siuser . "' AND (log_action = 'Closed 1' OR log_action = 'Closed custom-y'";
+		while ($rowc = mysql_fetch_assoc($resultc)) {
+			$clrid = $rowc['clr_id'];
+			$query.= " OR log_action = 'ClosedNew $clrid'";
+		}
+		$query.= ");";
+		echo "<br><br>";
 		$result = $tsSQL->query($query); // Get all the requests this user has marked as 'created'
 		if (!$result)
 		{
@@ -267,9 +282,24 @@ class StatsUsers extends StatisticsPage
 				$out.= "</ol>\n"; // End the ordered list
 			}
 		}
+		
+		// Get all reasons that are considered to be 'created' requests
+		$queryc = "SELECT clr_id FROM acc_clr WHERE clr_decline = 0;";
+		$resultc = $tsSQL->query($queryc);
+		if (!$resultc) {
+			// If query fails, tell us about it
+			$out.="<span style=\"color:red;font-weight:bold\">" . $tsSQL->getError() . "</span>";
+		}
+		
 		// List the requests this user has *not* marked as 'created'
 		$out.= "<h2>Users not created</h2>\n";
-		$query = "SELECT * FROM acc_log JOIN acc_pend ON pend_id = log_pend WHERE log_user = '" . $siuser . "' AND (log_action != 'Closed 1' AND log_action != 'Closed custom-y') AND log_action LIKE 'Closed %' AND log_action != 'Closed custom';";
+		$query = "";
+		$query.= "SELECT * FROM acc_log JOIN acc_pend ON pend_id = log_pend WHERE log_user = '" . $siuser . "' AND (log_action != 'Closed 1' AND log_action != 'Closed custom-y'";
+		while ($rowc = mysql_fetch_assoc($resultc)) {
+			$clrid = $rowc['clr_id'];
+			$query.= " AND log_action != 'ClosedNew $clrid'";
+		}
+		$query.=") AND (log_action LIKE 'Closed %' OR log_action LIKE 'ClosedNew %') AND log_action != 'Closed custom';";
 		$result = $tsSQL->query($query); // Get all the requests this user has *not* marked as 'created'
 		if (!$result)
 		{

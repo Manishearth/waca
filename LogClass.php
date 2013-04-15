@@ -196,6 +196,7 @@ class LogPage
 		$count = current(mysql_fetch_array($this->getLog($offset, null, true)));
 		$logList = "";
 		$logListCount = 0;
+		
 		while ($row = mysql_fetch_assoc($result)) {
 			$rlu = $row['log_user'];
 			$rla = $row['log_action'];
@@ -266,7 +267,7 @@ class LogPage
 				$query3 = "SELECT * FROM acc_emails WHERE mail_id = '$mid';";
 				$result3 = mysql_query($query3, $tsSQLlink);
 				if (!$result3)
-					Die("Query failed: $query ERROR: " . mysql_error());
+					Die("Query failed: $query3 ERROR: " . mysql_error());
 				$row3 = mysql_fetch_assoc($result3);
 				$logList .="<li>$rlu Edited message <a href=\"$tsurl/acc.php?action=messagemgmt&amp;view=$rlp\">$rlp (" . $row3['mail_desc'] . ")</a>, at $rlt.</li>\n";
 			}
@@ -328,6 +329,26 @@ class LogPage
 			}			
 			if($rla == "EditComment-c") {
 				$logList .= "<li>$rlu edited <a href=\"$tsurl/acc.php?action=ec&amp;id=$rlp\">comment $rlp</a>, at $rlt</li>";
+			}
+			if ($rla == "CloseAdded") {
+				$logList .="<li>$rlu created <a href=\"$tsurl/acc.php?action=messagemgmt&amp;clrview=$rlp\">close reason $rlp ($rlc)</a>, at $rlt.</li>\n";
+			}
+			if ($rla == "CloseEdited") {
+				$logList .="<li>$rlu edited <a href=\"$tsurl/acc.php?action=messagemgmt&amp;clrview=$rlp\">close reason $rlp ($rlc)</a>, at $rlt.</li>\n";
+			}
+			#Get all new close reason's and their descriptions from the database, including inactive ones.
+			$queryc="SELECT clr_id, clr_desc FROM acc_clr;";
+			$resultc = mysql_query($queryc, $tsSQLlink);
+			if (!$resultc)
+				Die("Query failed: $queryc ERROR: " . mysql_error());
+			#Use a while loop to add all new close reasons. 
+			#Call the log entries "ClosedNew x" to avoid conflicts with old system of hardcoded messages.
+			while ($rowc = mysql_fetch_assoc($resultc)) {
+				$clrid = $rowc['clr_id'];
+				$clrdesc = $rowc['clr_desc'];
+				if ($rla == "ClosedNew $clrid") {
+					$logList .="<li>$rlu Closed ($clrdesc), <a href=\"$tsurl/acc.php?action=zoom&amp;id=$rlp\">Request $rlp</a> at $rlt.</li>\n";
+				}
 			}
 			$logListCount++;
 		}
@@ -420,6 +441,12 @@ class LogPage
 			if ($rla == "EditedTemplate") {
 				$out[] = array('time'=> $rlt, 'user'=>$rlu, 'description' =>"edited template", 'target' => $rlp, 'comment' => $rlc, 'action' => $rla, 'security' => 'user');
 			}
+			if ($rla == "CloseAdded") {
+				$out[] = array('time'=> $rlt, 'user'=>$rlu, 'description' =>"created close reason", 'target' => $rlp, 'comment' => $rlc, 'action' => $rla, 'security' => 'user');
+			}
+			if ($rla == "CloseEdited") {
+				$out[] = array('time'=> $rlt, 'user'=>$rlu, 'description' =>"edited close reason", 'target' => $rlp, 'comment' => $rlc, 'action' => $rla, 'security' => 'user');
+			}
 			if ($rla == "Edited") {
 				$mid = $rlp;
 				$query3 = "SELECT * FROM acc_emails WHERE mail_id = '$mid';";
@@ -484,6 +511,20 @@ class LogPage
 			if($rla == "EditComment-r") {
 				$out[] = array('time'=> $rlt, 'user'=>$rlu, 'description' =>"edited a comment", 'target' => $rlp, 'comment' => $rlc, 'action' => $rla, 'security' => 'user');
 			}
+			#Get all new close reason's and their descriptions from the database, including inactive ones.
+			$queryc="SELECT clr_id, clr_desc FROM acc_clr;";
+			$resultc = mysql_query($queryc, $tsSQLlink);
+			if (!$resultc)
+				Die("Query failed: $queryc ERROR: " . mysql_error());
+			#Use a while loop to add all new close reasons.
+			#Call the log entries "ClosedNew x" to avoid conflicts with old system of hardcoded messages.
+			while ($rowc = mysql_fetch_assoc($resultc)) {
+				$clrid = $rowc['clr_id'];
+				$clrdesc = $rowc['clr_desc'];
+				if ($rla == "ClosedNew $clrid") {
+					$out[] = array('time'=> $rlt, 'user'=>$rlu, 'description' =>"closed ($clrdesc)", 'target' => $rlp, 'comment' => $rlc, 'action' => $rla, 'security' => 'user');
+				}
+			}
 		}
 		
 		return $out;
@@ -496,44 +537,51 @@ class LogPage
 		$requestlog = array();
 		foreach($entirelog as $entry)
 		{
-			switch($entry['action']){
-				case "Approved":
-				case "badpass":
-				case "Banned":
-				case "CreatedTemplate":
-				case "Declined":
-				case "DeletedTemplate":
-				case "Edited":
-				case "EditedTemplate":
-				case "Prefchange":
-				case "Promoted":
-				case "Renamed":
-				case "Suspended":
-				case "Unbanned":
-					break;
-				case "Deferred":
-				case "Closed":
-				case "Closed 0":
-				case "Closed 1":
-				case "Closed 2":
-				case "Closed 3":
-				case "Closed 4":
-				case "Closed 5":
-				case "Closed 26":
-				case "Closed 30":
-				case "Closed custom":
-				case "Closed custom-n":
-				case "Closed custom-y":
-				case "Email Confirmed":
-				case "Reserved":
-				case "Unreserved":
-				case "BreakReserve":
-				case "EditComment-r":
-					$requestlog[] = $entry;
-					break;
-				default:
+			if( substr($entry['action'], 0, 9) == "ClosedNew") {
 				$requestlog[] = $entry;
-					break;
+			}
+			else {
+				switch($entry['action']){
+					case "Approved":
+					case "badpass":
+					case "Banned":
+					case "CreatedTemplate":
+					case "Declined":
+					case "DeletedTemplate":
+					case "Edited":
+					case "EditedTemplate":
+					case "Prefchange":
+					case "Promoted":
+					case "Renamed":
+					case "Suspended":
+					case "Unbanned":
+						break;
+					case "Deferred":
+					case "Closed":
+					case "Closed 0":
+					case "Closed 1":
+					case "Closed 2":
+					case "Closed 3":
+					case "Closed 4":
+					case "Closed 5":
+					case "Closed 26":
+					case "Closed 30":
+					case "Closed custom":
+					case "Closed custom-n":
+					case "Closed custom-y":
+					case "Email Confirmed":
+					case "Reserved":
+					case "Unreserved":
+					case "BreakReserve":
+					case "CloseAdded":
+					case "CloseEdited":
+					case "EditComment-r":
+						$requestlog[] = $entry;
+						break;
+					default:
+						$requestlog[] = $entry;
+						break;
+				}
 			}
 		}
 		

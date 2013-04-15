@@ -207,14 +207,14 @@ function sendemail($messageno, $target, $id) {
 	mysql_pconnect($toolserver_host, $toolserver_username, $toolserver_password);
 	@ mysql_select_db($toolserver_database) or sqlerror(mysql_error(),"Error selecting database.");
 	$messageno = sanitize($messageno);
-	$query = "SELECT * FROM acc_emails WHERE mail_id = '$messageno';";
+	$query = "SELECT clr_text FROM acc_clr WHERE clr_id = '$messageno';";
 	$result = mysql_query($query);
 	if (!$result)
 	sqlerror("Query failed: $query ERROR: " . mysql_error(),"Database query error.");
 	$row = mysql_fetch_assoc($result);
-	$mailtxt = $row['mail_text'];
+	$clrtxt = $row['clr_text'];
 	$headers = 'From: accounts-enwiki-l@lists.wikimedia.org';
-	mail($target, "RE: [ACC #$id] English Wikipedia Account Request", $mailtxt, $headers);
+	mail($target, "RE: [ACC #$id] English Wikipedia Account Request", $clrtxt, $headers);
 }
 
 function listrequests($type, $hideip, $correcthash) {
@@ -866,33 +866,28 @@ function zoomPage($id,$urlhash)
 		}
 	}
 		
-	$out.="<p><b>Actions:</b> ";
+	$out.="\n<p><b>Actions:</b> ";
 	$type = $row['pend_status'];
 	$checksum = $row['pend_checksum'];
 	$pendid = $row['pend_id'];
 
 	if(! isProtected($row['pend_id']) && isReserved($row['pend_id']))
 	{
-		// Done
-		$out .= '<a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=1&amp;sum=' . $row['pend_checksum'] . '"><strong>Created!</strong></a>';
-
-		// Similar
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=2&amp;sum=' . $row['pend_checksum'] . '">Similar</a>';
-
-		// Taken
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=3&amp;sum=' . $row['pend_checksum'] . '">Taken</a>';
-
-		// SUL Taken
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=26&amp;sum=' . $row['pend_checksum'] . '">SUL Taken</a>';
-
-		// UPolicy
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=4&amp;sum=' . $row['pend_checksum'] . '">UPolicy</a>';
-
-		// Invalid
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=5&amp;sum=' . $row['pend_checksum'] . '">Invalid</a>';
-
-		// Email reset notification
-		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=30&amp;sum=' . $row['pend_checksum'] . '">Password Reset</a>';
+		// Get most close reasons from database
+		global $createdclr;
+		$queryc = "SELECT clr_id, clr_desc FROM acc_clr WHERE clr_active = 1;";
+		$resultc = mysql_query($queryc, $tsSQLlink);
+		if (!$resultc)
+			sqlerror("Query failed: $queryc ERROR: " . mysql_error());
+		while ($rowc = mysql_fetch_assoc($resultc)) {
+			//Treat the first close reason as special and bold it.
+			if ($rowc['clr_id'] == $createdclr) {
+				$out .= '<a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=' . $rowc['clr_id'] . '&amp;sum=' . $row['pend_checksum'] . '"><b>' . $rowc['clr_desc'] . '</b></a>';
+			}
+			else {
+			$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=' . $rowc['clr_id'] . '&amp;sum=' . $row['pend_checksum'] . '">' . $rowc['clr_desc'] . '</a>';
+			}
+		}
 
 		// Custom
 		$out .= ' | <a class="request-done" href="' . $tsurl . '/acc.php?action=done&amp;id=' . $row['pend_id'] . '&amp;email=custom&amp;sum=' . $row['pend_checksum'] . '">Custom</a>';
@@ -1145,7 +1140,7 @@ function zoomPage($id,$urlhash)
 		$out .= "<i>IP information cleared.</i>\n";
 	}
 
-	// Displayes other requests from this email.
+	// Displays other requests from this email.
 	$emailmsg = 'this email';
 	if ($hideinfo == FALSE || $session->hasright($_SESSION['user'], 'Admin') || $session->isCheckuser($_SESSION['user'])) {
 		$emailmsg = $thisemail;
@@ -1189,8 +1184,19 @@ function zoomPage($id,$urlhash)
 		sqlerror("Query failed: $query ERROR: " . mysql_error());
 	$row = mysql_fetch_assoc($result);
 		if(array_key_exists('user_abortpref',$row)){
+		$queryc = "SELECT clr_desc, clr_question FROM acc_clr WHERE clr_active = 1 AND clr_question != '';";
+		$resultc = mysql_query($queryc, $tsSQLlink);
+		if (!$resultc)
+			sqlerror("Query failed: $queryc ERROR: " . mysql_error());
+		//Replace message 32 with questions from the database.
 		$out.= '<script language=javascript>';
-		$out.= $messages->getMessage(32);
+		$out.= '
+		var confirmReqCloseQuestions={ ' . "\n" . '
+		"Create!" : "Are you sure that you want to create? Please ensure you have completed all the checks.", ' . "\n";
+		while ($rowc = mysql_fetch_assoc($resultc)) {
+			$out.= '"' . $rowc['clr_desc'] . '" : "' . $rowc['clr_question'] . '", ' . "\n";
+ 		}
+ 		$out.= '"Custom" : "" };' . "\n";
 		if($row['user_abortpref']==0){
 			//Checks user preferences and accordingly runs script (see script.js)
 			$out.= 'abortChecker()';
