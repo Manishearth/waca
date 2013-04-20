@@ -1770,6 +1770,18 @@ elseif ($action == "logs") {
 				"CloseAdded" => "Close reason creation",
 				"CloseEdited" => "Close reason editing"
 	);
+	#Get all new close reason's and their descriptions from the database, including inactive ones.
+	$queryc="SELECT clr_id, clr_desc FROM acc_clr;";
+	$resultc = mysql_query($queryc, $tsSQLlink);
+	if (!$resultc)
+		Die("Query failed: $queryc ERROR: " . mysql_error());
+	#Use a while loop to add all new close reasons.
+	#Call the log entries "ClosedNew x" to avoid conflicts with old system of hardcoded messages.
+	while ($rowc = mysql_fetch_assoc($resultc)) {
+		$clrid = $rowc['clr_id'];
+		$clrdesc = $rowc['clr_desc'];
+		$logActions["ClosedNew $clrid"] = "Request closed as $clrdesc";
+	}
 	foreach($logActions as $key => $value)
 	{
 		echo "<option value=\"".$key."\"";
